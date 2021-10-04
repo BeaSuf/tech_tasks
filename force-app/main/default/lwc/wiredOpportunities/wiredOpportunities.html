@@ -1,0 +1,29 @@
+<template>
+    <lightning-card icon-name="standard:opportunity" title="Opportunity Filter">
+        <div class="slds-m-around_medium">
+            <div id="combobox" class="slds-m-bottom_small">
+                <lightning-combobox
+                    name="Opportunity Filter"                   
+                    value={value}
+                    placeholder="Select Opportunity Stage"
+                    options={options}
+                    onchange={handleChange} >
+                </lightning-combobox>
+            </div>
+    
+            <div id="datatable" class="slds-m-bottom_small">
+                <template if:true={fillteredOpps}>
+                    <lightning-datatable 
+                        data={fillteredOpps} 
+                        columns={cols} 
+                        key-field="Id"
+                        hide-checkbox-column="true">
+                    </lightning-datatable>
+                </template>   
+                <template if:true={empty}>
+                    No data to display
+                </template>                        
+            </div>
+        </div>
+    </lightning-card>
+</template>

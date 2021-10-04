@@ -1,0 +1,49 @@
+<template>
+    <div class="slds-m-around_medium">
+      
+        <div class="slds-m-bottom_small">
+            <lightning-input type="text"
+               value={currency}
+               label="Currency"
+               onchange={searchCurrency}>
+            </lightning-input>
+        </div>
+        
+        <div class="slds-m-bottom_small">
+            <lightning-button label="Search" onclick={handleSearchCurrency}></lightning-button>
+        </div>
+
+        <lightning-card title="Latest Exchange Rate">
+            <template if:true={currencyRate}>
+                <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-table_col-bordered">
+                    <thead>
+                        <tr class="slds-text-title_caps">
+                            <th scope="col">
+                                <div title="Key">Currency</div>
+                            </th>
+                            <th scope="col">
+                                <div title="Value">Rate</div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template for:each={currencyRate} for:item="keyValue">
+                            <tr key={keyValue.key}>
+                                <th scope="col">
+                                    <div>{keyValue.key}</div>
+                                </th>
+                                <th scope="col">
+                                    <div>{keyValue.value}</div>
+                                </th>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </template>            
+        </lightning-card>
+
+        <template if:true={nodata}>
+            <lightning-card title="Currency Not Found. Please Check Spelling"></lightning-card>
+        </template>
+    </div>
+</template>
