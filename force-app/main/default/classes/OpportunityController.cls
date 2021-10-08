@@ -1,15 +1,27 @@
 public with sharing class OpportunityController {
     @AuraEnabled(cacheable=true)
-    public static Map <String, List<Opportunity>> fetchOpportunityData() {        
+    public static Map <String, List<Opportunity>> getOpportunitiesByStage(String stage) {        
         Map <String, List<Opportunity>> mapStageOpps = new Map <String, List<Opportunity>>();
-        List<String> stages = getStages();
+               
+        if(stage != 'All'){
+            for(OppORtunity opp : [SELECT Id, StageName, Name, Account.Name FROM OppORtunity 
+                                    WHERE StageName = :stage 
+                                    WITH SECURITY_ENFORCED]){
+                List<Opportunity> opps = (mapStageOpps.containsKey(opp.StageName)) ? mapStageOpps.get(opp.StageName) : new List<Opportunity>();
+                opps.add(opp);
+                mapStageOpps.put(stage, opps);                    
+            }          
+        } else {
+            List<String> stages = getStages();
         
-        for(OppORtunity opp : [SELECT Id, StageName, Name, Account.Name FROM OppORtunity 
-                                WHERE StageName IN :stages]){
-            List<Opportunity> opps = (mapStageOpps.containsKey(opp.StageName)) ? mapStageOpps.get(opp.StageName) : new List<Opportunity>();
-            opps.add(opp);
-            mapStageOpps.put(opp.StageName, opps);                    
-        }          
+            for(OppORtunity opp : [SELECT Id, StageName, Name, Account.Name FROM OppORtunity 
+                                    WHERE StageName IN :stages
+                                    WITH SECURITY_ENFORCED]){
+                List<Opportunity> opps = (mapStageOpps.containsKey(opp.StageName)) ? mapStageOpps.get(opp.StageName) : new List<Opportunity>();
+                opps.add(opp);
+                mapStageOpps.put(opp.StageName, opps);                    
+            }          
+        }
         
         return mapStageOpps;
     }
