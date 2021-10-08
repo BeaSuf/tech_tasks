@@ -1,9 +1,12 @@
 import { LightningElement, track, wire } from 'lwc';
-// import server side apex class method 
-import opportunitiesData from'@salesforce/apex/OpportunityController.fetchOpportunityData';
+import { refreshApex } from '@salesforce/apex';
+// import server side apex class methods
+import opportunitiesByStage from'@salesforce/apex/OpportunityController.getOpportunitiesByStage';
 import stagesData from'@salesforce/apex/OpportunityController.getStages';
 // import standard toast event 
 import {ShowToastEvent} from 'lightning/platformShowToastEvent'
+
+
 const COLS = [
     { label: 'Stage', fieldName: 'StageName', type: 'text' },
     { label: 'Name', fieldName: 'Name', type: 'text' }    ,
@@ -11,41 +14,26 @@ const COLS = [
 ];
 
 export default class WiredOpportunities extends LightningElement {
-    @track fillteredOpps = [];
     @track empty;
-
-    opportunitiesPerStage = new Map();
-    all = [];
+    @track filtered = [];
+    
+    opportunitiesPerStage = [];
+    selectedValue = '';
+    stage = '';
     cols = COLS;
-    value;
-    options;
-
-    // connectedCallback(){
-    //     stagesData()
-    //         .then(data => {
-    //             this.options = data.map(stage => {
-    //                 return {label: stage, value: stage}
-    //             });
-    //             this.options.push({ label: 'All', value: 'All' });    
-    //         })
-    //         .catch(error => {
-    //             const event = new ShowToastEvent({
-    //                 title: 'Error',
-    //                 variant: 'error',
-    //                 message: error.body.message,
-    //             });
-    //             this.dispatchEvent(event);
-    //         });
-    // }
-
+    options = [];
+    wiredActivities;
+  
     @wire(stagesData)
     getStagesData({data, error}){
-        if(data) {
-            window.console.log(data);
-            this.options = data.map(stage => {
-                return {label: stage, value: stage}
-            });
-            this.options.push({ label: 'All', value: 'All' });    
+        if(data) { 
+            this.options = data.map(stage =>{
+                console.log(stage);  
+                return {label: stage, value: stage};
+            })
+          
+            this.options.push({ label: 'All', value: 'All' });   
+            console.log(this.options);             
         } 
         else if(error) {
             const event = new ShowToastEvent({
@@ -56,55 +44,47 @@ export default class WiredOpportunities extends LightningElement {
             this.dispatchEvent(event);
         }
     }
-    
-    get options() {
-        return this.options;
-    }
-    
-    @wire(opportunitiesData)    
-        getOpportunitiesData({data, error}){
-            if(data) {                
-                for(let key in data) {
-                    // Preventing unexcepted data
-                    if (data.hasOwnProperty(key)) { // Filtering the data according to search term
-                        let d = data[key].map(row => {
-                            return {...row, AccountName: row.Account.Name}
-                        })
-                        this.opportunitiesPerStage.set(key, d);                    
-                        d.forEach(opp => {
-                            this.all.push(opp);                        
-                        });                                                         
-                    }
+   
+    @wire(opportunitiesByStage, {stage: '$stage'})    
+    getOpportunitiesByStage(value){
+        // Hold on to the provisioned value so it will be refreshed later.
+        this.wiredOpps = value; // track the provisioned value        
+        const {data, error} = value; //destructure the provisioned value        
+        if(data) {                          
+            for(let key in data) {                
+                // Preventing unexcepted data
+                if (Object.prototype.hasOwnProperty.call(data, key)) {                    
+                    let opps = data[key].map(row => {
+                        return {Id: row.Id, StageName: row.StageName, Name: row.Name, AccountName: row.Account.Name}
+                    });
+                    this.opportunitiesPerStage.push(...opps);                              
                 }
             }
-            else if(error) {
-                const event = new ShowToastEvent({
-                    title: 'Error',
-                    variant: 'error',
-                    message: error.body.message,
-                });
-                this.dispatchEvent(event);
-            }
-        }    
+            this.filtered = this.opportunitiesPerStage;
+
+            console.log("filtered: " + JSON.stringify(this.filtered));
+            
+            this.empty = Object.keys(data).length === 0 && data.constructor === Object;
+        }
+        else if(error) {
+            this.empty = true;
+            const event = new ShowToastEvent({
+                title: 'Error',
+                variant: 'error',
+                message: error.body.message,
+            });
+            this.dispatchEvent(event);
+        } 
+    }    
 
     // update filter var when combobox field value change
-    handleChange(event) {        
-        this.fillteredOpps = [];
-        this.value = event.detail.value;  
-                
-        if (this.value !== 'All') {   
-            let opp = this.opportunitiesPerStage.get(this.value);
-            if(opp != undefined){
-                this.fillteredOpps = this.opportunitiesPerStage.get(this.value);
-                this.empty = false;
-            } else {
-                this.empty = true;
-                this.fillteredOpps = [];
-            }
-        } else {
-            //all
-            this.fillteredOpps = this.all;
-            this.empty = false;
-        }        
-    }
+    handleChange(event) {     
+        this.selectedValue = event.detail.value;
+        this.filtered = [];    
+        
+        this.stage = this.selectedValue;
+        this.opportunitiesPerStage = [];             
+        // Use the this.wiredOpps value to refresh getOpportunitiesByStage().
+        refreshApex(this.wiredOpps); 
+    }    
 }
